@@ -16,7 +16,7 @@ module "tags" {
   source = "git::https://github.com/sourcefuse/terraform-aws-refarch-tags.git?ref=1.1.0"
 
   environment = var.environment
-  project     = "terraform-refarch-github-runner"
+  project     = "terraform-aws-refarch-github-runner"
 
   extra_tags = {
     Example = "True"
