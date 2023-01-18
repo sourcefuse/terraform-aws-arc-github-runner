@@ -23,13 +23,13 @@ variable "namespace" {
 ## network
 ################################################################################
 variable "vpc_names" {
-  type = list(string)
+  type        = list(string)
   description = "Private subnet names to add the runner"
-  default = ["arc-dev-vpc"]
+  default     = ["arc-dev-vpc"]
 }
 
 variable "private_subnet_names" {
-  type = list(string)
+  type        = list(string)
   description = "Private subnet names to add the runner"
   default = [
     "arc-dev-private-us-east-1a",

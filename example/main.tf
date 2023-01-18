@@ -9,6 +9,11 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 4.0"
     }
+
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
   }
 }
 
@@ -27,6 +32,8 @@ provider "aws" {
   region = var.region
 }
 
+provider "random" {}
+
 ################################################################################
 ## lookups
 ################################################################################
@@ -39,15 +46,10 @@ data "aws_vpc" "this" {
 
 data "aws_subnets" "private" {
   filter {
-    name = "tag:Name"
+    name   = "tag:Name"
     values = var.private_subnet_names
   }
 }
-
-#data "aws_subnet" "private" {
-#  for_each = toset(data.aws_subnets.private.ids)
-#  id       = each.value
-#}
 
 ################################################################################
 ## runner
@@ -57,7 +59,7 @@ module "runner" {
 
   namespace   = var.namespace
   environment = var.environment
-  subnet_id   = "subnet-08857bbfad7bc9769" #local.private_subnet_ids[0]
+  subnet_id   = local.private_subnet_ids[0]
   vpc_id      = data.aws_vpc.this.id
 
   tags = module.tags.tags
