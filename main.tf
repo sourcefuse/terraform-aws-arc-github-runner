@@ -58,7 +58,7 @@ module "runner" {
   volume_tags_enabled          = var.volume_tags_enabled
 
   ## security
-  ssm_patch_manager_iam_policy_arn = aws_iam_role.runner.arn
+#  ssm_patch_manager_iam_policy_arn = aws_iam_role.ssm.arn
   security_group_rules             = var.security_group_rules
 
   tags = var.tags
@@ -67,30 +67,32 @@ module "runner" {
 ################################################################################
 ## iam
 ################################################################################
-resource "aws_iam_role" "runner" {
-  name = "${var.namespace}-${var.environment}-gh-runner-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect = "Allow",
-        Action = "sts:AssumeRole",
-        Principal = {
-          Service = "ec2.amazonaws.com"
-        },
-      }
-    ]
-  })
-
-  tags = merge(var.tags, tomap({
-    Name = "${var.namespace}-${var.environment}-gh-runner-role"
-  }))
-}
+#resource "aws_iam_role" "ssm" {
+#  name = "${var.namespace}-${var.environment}-ssm-role"
+#
+#  assume_role_policy = jsonencode({
+#    Version = "2012-10-17",
+#    Statement = [
+#      {
+#        Effect = "Allow",
+#        Action = "sts:AssumeRole",
+#        Principal = {
+#          Service = "ec2.amazonaws.com"
+#        },
+#      }
+#    ]
+#  })
+#
+#  tags = merge(var.tags, tomap({
+#    Name = "${var.namespace}-${var.environment}-ssm-role"
+#  }))
+#}
 
 resource "aws_iam_role_policy_attachment" "runner" {
-  role       = aws_iam_role.runner.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"
+  for_each = toset(var.runner_iam_role_policy_arns)
+
+  role       = module.runner.role
+  policy_arn = each.value
 }
 
 ################################################################################
@@ -101,27 +103,42 @@ resource "aws_ssm_document" "runner" {
   document_type = "Command"
   target_type   = "/AWS::EC2::Instance"
 
-  content = jsonencode(
-    {
-      schemaVersion = "1.2",
-      description   = "Check ip configuration of a Linux instance.",
-      parameters = {
+  content = jsonencode({
+    schemaVersion = "2.2"
+    description   = "Install Docker CE to Runner."
 
-      },
-      runtimeConfig = {
-        "aws:runShellScript" = {
-          properties = [
-            {
-              id         = "0.aws:runShellScript",
-              runCommand = ["ifconfig"]
-            }
+    mainSteps = [
+      {
+        name   = "installDockerCE"
+        action = "aws:runShellScript"
+        inputs = {
+          runCommand = [
+            "export DEBIAN_FRONTEND=noninteractive",
+            "sudo su -",
+            "apt-get update",
+            "apt-get install -y ca-certificates curl gnupg lsb-release",
+            "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg",
+            "echo \"deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null",
+            "apt-get update",
+            "apt-get install -y docker-ce docker-ce-cli containerd.io"
           ]
         }
-      }
-    }
-  )
+      },
+    ]
+  })
 
   tags = merge(var.tags, tomap({
     Name = "${var.namespace}-${var.environment}-gh-runner-ec2"
   }))
+}
+
+resource "aws_ssm_association" "runner" {
+  for_each = toset(local.runner_ssm_association)
+
+  name = each.value
+
+  targets {
+    key    = "InstanceIds"
+    values = [module.runner.id]
+  }
 }

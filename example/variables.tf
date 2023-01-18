@@ -15,6 +15,24 @@ variable "environment" {
 
 variable "namespace" {
   type        = string
-  description = "Namespace of the project, i.e. refarch"
+  description = "Namespace of the project, i.e. arc"
   default     = "arc"
+}
+
+################################################################################
+## network
+################################################################################
+variable "vpc_names" {
+  type = list(string)
+  description = "Private subnet names to add the runner"
+  default = ["arc-dev-vpc"]
+}
+
+variable "private_subnet_names" {
+  type = list(string)
+  description = "Private subnet names to add the runner"
+  default = [
+    "arc-dev-private-us-east-1a",
+    "arc-dev-private-us-east-1b"
+  ]
 }

@@ -27,25 +27,27 @@ provider "aws" {
   region = var.region
 }
 
-################################################################
+################################################################################
 ## lookups
-################################################################
+################################################################################
 data "aws_vpc" "this" {
   filter {
     name   = "tag:Name"
-    values = ["refarch${var.namespace}-${terraform.workspace}-vpc"]
+    values = var.vpc_names
   }
 }
 
 data "aws_subnets" "private" {
   filter {
     name = "tag:Name"
-    values = [
-      "refarch${var.namespace}-${terraform.workspace}-privatesubnet-private-${var.region}a",
-      "refarch${var.namespace}-${terraform.workspace}-privatesubnet-private-${var.region}b"
-    ]
+    values = var.private_subnet_names
   }
 }
+
+#data "aws_subnet" "private" {
+#  for_each = toset(data.aws_subnets.private.ids)
+#  id       = each.value
+#}
 
 ################################################################################
 ## runner
@@ -55,7 +57,7 @@ module "runner" {
 
   namespace   = var.namespace
   environment = var.environment
-  subnet_id   = data.aws_subnets.private.ids[0]
+  subnet_id   = "subnet-08857bbfad7bc9769" #local.private_subnet_ids[0]
   vpc_id      = data.aws_vpc.this.id
 
   tags = module.tags.tags
