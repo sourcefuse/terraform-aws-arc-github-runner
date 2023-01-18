@@ -9,6 +9,11 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 4.0"
     }
+
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
   }
 }
 
@@ -58,8 +63,8 @@ module "runner" {
   volume_tags_enabled          = var.volume_tags_enabled
 
   ## security
-#  ssm_patch_manager_iam_policy_arn = aws_iam_role.ssm.arn
-  security_group_rules             = var.security_group_rules
+  #  ssm_patch_manager_iam_policy_arn = aws_iam_role.ssm.arn
+  security_group_rules = var.security_group_rules
 
   tags = var.tags
 }
@@ -67,27 +72,6 @@ module "runner" {
 ################################################################################
 ## iam
 ################################################################################
-#resource "aws_iam_role" "ssm" {
-#  name = "${var.namespace}-${var.environment}-ssm-role"
-#
-#  assume_role_policy = jsonencode({
-#    Version = "2012-10-17",
-#    Statement = [
-#      {
-#        Effect = "Allow",
-#        Action = "sts:AssumeRole",
-#        Principal = {
-#          Service = "ec2.amazonaws.com"
-#        },
-#      }
-#    ]
-#  })
-#
-#  tags = merge(var.tags, tomap({
-#    Name = "${var.namespace}-${var.environment}-ssm-role"
-#  }))
-#}
-
 resource "aws_iam_role_policy_attachment" "runner" {
   for_each = toset(var.runner_iam_role_policy_arns)
 
@@ -98,6 +82,15 @@ resource "aws_iam_role_policy_attachment" "runner" {
 ################################################################################
 ## configuration
 ################################################################################
+resource "random_string" "ssm" {
+  length      = 5
+  lower       = true
+  numeric     = true
+  min_numeric = 1
+  special     = false
+  upper       = false
+}
+
 resource "aws_ssm_document" "runner" {
   name          = "${var.namespace}-${var.environment}-gh-runner-ec2"
   document_type = "Command"
@@ -135,7 +128,8 @@ resource "aws_ssm_document" "runner" {
 resource "aws_ssm_association" "runner" {
   for_each = toset(local.runner_ssm_association)
 
-  name = each.value
+  name             = each.value
+  association_name = "${each.value}-${random_string.ssm.result}"
 
   targets {
     key    = "InstanceIds"

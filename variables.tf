@@ -119,7 +119,7 @@ variable "security_group_rules" {
 }
 
 variable "runner_iam_role_policy_arns" {
-  type = list(string)
+  type        = list(string)
   description = "IAM role policies to attach to the Runner instance"
   default = [
     "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
