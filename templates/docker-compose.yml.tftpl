@@ -9,7 +9,7 @@ services:
         condition: on-failure
         delay: 5s
         max_attempts: 3
-        window: 120s
+        window: 45s
     environment:
       RUNNER_TOKEN: "${runner_token}"
       RUNNER_ORGANIZATION_URL: "https://github.com/${runner_organization}"
