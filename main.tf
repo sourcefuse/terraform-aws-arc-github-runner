@@ -247,6 +247,7 @@ resource "null_resource" "prepare" {
       GITHUB_ORGANIZATION = self.triggers.github_organization
       WORKING_DIRECTORY   = self.triggers.working_directory
     }
+    // || true --> to avoid output of sensitive values if it fails
     command = <<-EOT
       ${self.triggers.get_runner_token} || true
     EOT
@@ -381,6 +382,7 @@ resource "null_resource" "cleanup" {
       GITHUB_ORGANIZATION = self.triggers.github_organization
       WORKING_DIRECTORY   = self.triggers.working_directory
     }
+    // || true --> to avoid output of sensitive values if it fails
     command = <<-EOT
       ${self.triggers.remove_runner} || true
     EOT

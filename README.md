@@ -146,14 +146,13 @@ module "runner" {
 - Tests are available in `test` directory
 - Configure the dependencies
   ```sh
-  cd test
-  go mod init github.com/sourcefuse/terraform-aws-ref-arch-db
+  cd test/
+  go mod init github.com/sourcefuse/terraform-aws-refarch-github-runner
   go get github.com/gruntwork-io/terratest/modules/terraform
   ```
 - Now execute the test  
   ```sh
-  cd test/
-  go test
+  go test -timeout  30m
   ```
 
 ## Authors
