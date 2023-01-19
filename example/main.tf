@@ -59,8 +59,8 @@ data "aws_subnets" "private" {
 }
 
 ## TODO - this was manually added. add automation to get the token from github then add as ssm param
-data "aws_ssm_parameter" "runner_token" {
-  name = "/${var.namespace}/${var.environment}/github-runner/token"
+data "aws_ssm_parameter" "github_token" {
+  name = "/${var.namespace}/${var.environment}/github/token"
 }
 
 ################################################################################
@@ -75,7 +75,7 @@ module "runner" {
   subnet_id     = local.private_subnet_ids[0]
   vpc_id        = data.aws_vpc.this.id
   instance_type = "t2.micro"
-  runner_token  = data.aws_ssm_parameter.runner_token.value
+  github_token  = data.aws_ssm_parameter.github_token.value
   runner_labels = "example,${var.namespace},${var.environment}"
 
   tags = module.tags.tags
