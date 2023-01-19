@@ -58,7 +58,7 @@ data "aws_subnets" "private" {
   }
 }
 
-## TODO - this was manually added. add automation to get the token from github then add as ssm param
+## this was manually obtained from github then added to ssm param.
 data "aws_ssm_parameter" "github_token" {
   name = "/${var.namespace}/${var.environment}/github/token"
 }
