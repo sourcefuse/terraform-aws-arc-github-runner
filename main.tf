@@ -139,8 +139,7 @@ resource "aws_s3_bucket_versioning" "runner" {
   bucket = aws_s3_bucket.runner.id
 
   versioning_configuration {
-    status     = "Enabled"
-    mfa_delete = "Enabled"
+    status = "Enabled"
   }
 }
 
@@ -339,13 +338,15 @@ resource "null_resource" "cleanup" {
   }
 
   provisioner "local-exec" {
-    when    = destroy
+    when = destroy
+    environment = {
+      GITHUB_RUNNER_TOKEN        = self.triggers.runner_token
+      GITHUB_RUNNER_NAME         = self.triggers.runner_name
+      GITHUB_RUNNER_ORGANIZATION = self.triggers.runner_organization
+      WORKING_DIRECTORY          = self.triggers.working_directory
+    }
     command = <<-EOT
-      export GITHUB_RUNNER_TOKEN=${self.triggers.runner_token}
-      export GITHUB_RUNNER_NAME=${self.triggers.runner_name}
-      export GITHUB_RUNNER_ORGANIZATION=${self.triggers.runner_organization}
-      export WORKING_DIRECTORY=${self.triggers.working_directory}
-      ${self.triggers.remove_runner}
+      ${self.triggers.remove_runner} || true
     EOT
   }
 }

@@ -16,4 +16,9 @@ ignore:
         reason: These are not highly available instances and can be terminated as needed.
         expires: "2024-01-01T00:00:00.000Z"
         created: "2023-01-18T04:58:00.000Z"
+  SNYK-CC-TF-127:
+    - resource > aws_s3_bucket_versioning[runner] > versioning_configuration > mfa_delete:
+        reason: Not currently needed with our SSO setup.
+        expires: "2024-01-01T00:00:00.000Z"
+        created: "2023-01-18T04:58:00.000Z"
 patch: {}
