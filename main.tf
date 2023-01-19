@@ -14,6 +14,11 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.0"
     }
+
+    null = {
+      source  = "hashicorp/null"
+      version = "3.2.1"
+    }
   }
 }
 
@@ -64,7 +69,7 @@ module "runner" {
   ## ami / size
   ami           = var.ami.id
   ami_owner     = var.ami.owner_id
-  instance_type = var.ami.instance_type
+  instance_type = var.instance_type
 
   ## monitoring / ssm / volume
   monitoring                   = var.monitoring_enabled
@@ -80,7 +85,7 @@ module "runner" {
   security_group_rules = var.security_group_rules
 
   tags = merge(var.tags, tomap({
-    GitHubRunnerName   = var.runner_name != null ? var.runner_name : "${var.namespace}-${var.environment}-github-runner-${random_string.runner.result}"
+    GitHubRunnerName   = local.runner_name
     GitHubRunnerLabels = local.aws_friendly_runner_labels
   }))
 }
@@ -119,7 +124,7 @@ resource "aws_s3_object" "docker_compose" {
   content_base64 = base64encode(templatefile("${path.module}/templates/docker-compose.yml.tftpl", {
     runner_token        = var.runner_token
     runner_organization = var.runner_organization
-    runner_name         = var.runner_name != null ? var.runner_name : module.runner.name
+    runner_name         = local.runner_name
     runner_labels       = var.runner_labels
   }))
 
@@ -282,7 +287,7 @@ resource "aws_ssm_association" "scheduled" {
   association_name = aws_ssm_document.docker_compose.name
 
   apply_only_at_cron_interval = true
-  schedule_expression         = "at(${trimsuffix(timeadd(timestamp(), "3m"), "Z")})" # TODO - do something better
+  schedule_expression         = "at(${trimsuffix(timeadd(timestamp(), "150s"), "Z")})" # TODO - do something better
 
   targets {
     key    = "InstanceIds"
@@ -296,51 +301,24 @@ resource "aws_ssm_association" "scheduled" {
   }
 }
 
-## add docker-compose and then start container
-#resource "aws_ssm_document" "docker_compose" {
-#  name          = "${var.namespace}-${var.environment}-github-runner-docker-compose-${random_string.runner.result}"
-#  document_type = "Package"
-#  target_type   = "/AWS::EC2::Instance"
-#
-#  content = jsonencode({
-#    schemaVersion = "2.2"
-#    description   = "Add docker-compose.yml to EC2 instance"
-#    packages = {
-#      ubuntu = {
-#        _any = {
-#          _any = {
-#            file = "docker-compose.yml"
-#          }
-#        }
-#      }
-#    }
-#  })
-#
-#  attachments_source {
-#    key    = "S3FileUrl"
-#    values = ["${aws_s3_bucket.runner.id}/docker-compose.yml"]
-#  }
-#
-#  tags = merge(var.tags, tomap({
-#    Name = "${var.namespace}-${var.environment}-github-runner-${random_string.runner.result}"
-#  }))
-#
-#  depends_on = [
-#    aws_s3_object.docker_compose
-#  ]
-#}
-#
-#resource "aws_ssm_association" "docker_compose" {
-#  name             = "AWS-RunRemoteScript-${element(aws_s3_bucket_object.scripts.*.etag, index(var.scripts, "myscript.sh"))}"
-#  association_name = "s3-script"
-#
-#  parameters {
-#    sourceType = "S3"
-#    sourceInfo = <<-EOT
-#      {
-#          "path": "https://s3.amazonaws.com/${aws_s3_bucket.runner.bucket}/docker-compose.yml"
-#      }
-#    EOT
-#    commandLine = "docker-compose up -d"
-#  }
-#}
+## remove runner
+resource "null_resource" "cleanup" {
+  triggers = {
+    runner_token        = var.runner_token
+    runner_name         = local.runner_name
+    runner_organization = var.runner_organization
+    remove_runner       = "${path.module}/scripts/remove-runner.sh"
+    working_directory   = path.module
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      export GITHUB_RUNNER_TOKEN=${self.triggers.runner_token}
+      export GITHUB_RUNNER_NAME=${self.triggers.runner_name}
+      export GITHUB_RUNNER_ORGANIZATION=${self.triggers.runner_organization}
+      export WORKING_DIRECTORY=${self.triggers.working_directory}
+      ${self.triggers.remove_runner}
+    EOT
+  }
+}
