@@ -11,6 +11,11 @@ variable "namespace" {
   description = "Namespace of the project, i.e. refarch"
 }
 
+variable "region" {
+  type        = string
+  description = "AWS region"
+}
+
 variable "tags" {
   type        = map(string)
   description = "Default tags to apply to every resource"
@@ -96,6 +101,39 @@ variable "volume_tags_enabled" {
 }
 
 ################################################################################
+## runner
+################################################################################
+variable "runner_token" {
+  description = "GitHub Runner token used for registering the runner to the Organization."
+  sensitive   = true
+  type        = string
+}
+
+variable "runner_organization" {
+  description = "GitHub Organization the runner belongs to."
+  type        = string
+  default     = "sourcefuse"
+}
+
+variable "runner_name" {
+  description = "Name to assign the GitHub Runner. If no value is given, it will use the ec2 instance name."
+  type        = string
+  default     = null
+}
+variable "runner_labels" {
+  description = <<-EOT
+    Labels to assign the GitHub Runner. If no values are given, the default labels will be:
+      - `self-hosted`
+      - Base OS, i.e. `Linux`
+      - Architecture, i.e. `X64`
+    These labels cannot be overridden.
+    Separate labels via comma, i.e. `dev,docker,another_label`
+  EOT
+  type        = string
+  default     = ""
+}
+
+################################################################################
 ## security
 ################################################################################
 variable "security_group_rules" {
@@ -118,7 +156,7 @@ variable "security_group_rules" {
   ]
 }
 
-variable "runner_iam_role_policy_arns" {
+variable "ec2_runner_iam_role_policy_arns" {
   type        = list(string)
   description = "IAM role policies to attach to the Runner instance"
   default = [
