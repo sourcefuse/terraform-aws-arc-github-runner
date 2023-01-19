@@ -8,5 +8,6 @@ locals {
     }
   ]
 
+  runner_name                = var.runner_name != null ? var.runner_name : "${var.namespace}-${var.environment}-github-runner-${random_string.runner.result}"
   aws_friendly_runner_labels = replace(var.runner_labels, ",", " + ")
 }
