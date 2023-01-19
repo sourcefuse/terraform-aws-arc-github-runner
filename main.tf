@@ -104,6 +104,32 @@ resource "aws_s3_bucket" "runner" {
   }))
 }
 
+resource "aws_s3_bucket_server_side_encryption_configuration" "runner" {
+  bucket = aws_s3_bucket.runner.bucket
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "aws:kms"
+    }
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "runner" {
+  bucket = aws_s3_bucket.runner.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_logging" "runner" {
+  bucket = aws_s3_bucket.runner.id
+
+  target_bucket = aws_s3_bucket.runner.id
+  target_prefix = "log/"
+}
+
 resource "aws_s3_bucket_acl" "runner" {
   bucket = aws_s3_bucket.runner.id
   acl    = "private"
@@ -113,7 +139,8 @@ resource "aws_s3_bucket_versioning" "runner" {
   bucket = aws_s3_bucket.runner.id
 
   versioning_configuration {
-    status = "Enabled"
+    status     = "Enabled"
+    mfa_delete = "Enabled"
   }
 }
 
