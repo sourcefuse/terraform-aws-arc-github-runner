@@ -23,6 +23,7 @@ module "runner" {
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | ~> 1.3, < 2.0.0 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 4.0 |
+| <a name="requirement_null"></a> [null](#requirement\_null) | 3.2.1 |
 | <a name="requirement_random"></a> [random](#requirement\_random) | ~> 3.0 |
 
 ## Providers
@@ -30,6 +31,7 @@ module "runner" {
 | Name | Version |
 |------|---------|
 | <a name="provider_aws"></a> [aws](#provider\_aws) | 4.50.0 |
+| <a name="provider_null"></a> [null](#provider\_null) | 3.2.1 |
 | <a name="provider_random"></a> [random](#provider\_random) | 3.4.3 |
 
 ## Modules
@@ -54,6 +56,7 @@ module "runner" {
 | [aws_ssm_association.scheduled](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssm_association) | resource |
 | [aws_ssm_document.docker_compose](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssm_document) | resource |
 | [aws_ssm_document.runner](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssm_document) | resource |
+| [null_resource.cleanup](https://registry.terraform.io/providers/hashicorp/null/3.2.1/docs/resources/resource) | resource |
 | [random_string.runner](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/string) | resource |
 | [aws_caller_identity.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/caller_identity) | data source |
 
@@ -61,10 +64,11 @@ module "runner" {
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_ami"></a> [ami](#input\_ami) | AMI information for the EC2 instance | <pre>object({<br>    id            = string<br>    owner_id      = string<br>    instance_type = string<br>  })</pre> | <pre>{<br>  "id": "ami-04505e74c0741db8d",<br>  "instance_type": "t3a.medium",<br>  "owner_id": "099720109477"<br>}</pre> | no |
+| <a name="input_ami"></a> [ami](#input\_ami) | AMI information for the EC2 instance | <pre>object({<br>    id       = string<br>    owner_id = string<br>  })</pre> | <pre>{<br>  "id": "ami-04505e74c0741db8d",<br>  "owner_id": "099720109477"<br>}</pre> | no |
 | <a name="input_associate_public_ip_address"></a> [associate\_public\_ip\_address](#input\_associate\_public\_ip\_address) | Associate a public IP address with the instance | `bool` | `false` | no |
 | <a name="input_ec2_runner_iam_role_policy_arns"></a> [ec2\_runner\_iam\_role\_policy\_arns](#input\_ec2\_runner\_iam\_role\_policy\_arns) | IAM role policies to attach to the Runner instance | `list(string)` | <pre>[<br>  "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",<br>  "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"<br>]</pre> | no |
 | <a name="input_environment"></a> [environment](#input\_environment) | Name of the environment, i.e. dev, stage, prod | `string` | n/a | yes |
+| <a name="input_instance_type"></a> [instance\_type](#input\_instance\_type) | The instance type for the EC2 instance. Default is t3a.medium. | `string` | `"t3a.medium"` | no |
 | <a name="input_monitoring_enabled"></a> [monitoring\_enabled](#input\_monitoring\_enabled) | Launched EC2 instance will have detailed monitoring enabled | `bool` | `true` | no |
 | <a name="input_namespace"></a> [namespace](#input\_namespace) | Namespace of the project, i.e. refarch | `string` | n/a | yes |
 | <a name="input_region"></a> [region](#input\_region) | AWS region | `string` | n/a | yes |
@@ -87,7 +91,7 @@ module "runner" {
 
 | Name | Description |
 |------|-------------|
-| <a name="output_runner_instance_id"></a> [runner\_instance\_id](#output\_runner\_instance\_id) | Instance ID of the EC2 Runner |
+| <a name="output_ec2_runner_instance_id"></a> [ec2\_runner\_instance\_id](#output\_ec2\_runner\_instance\_id) | Instance ID of the EC2 Runner |
 <!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
 
 ## Development

@@ -41,15 +41,19 @@ variable "subnet_id" {
 variable "ami" {
   description = "AMI information for the EC2 instance"
   type = object({
-    id            = string
-    owner_id      = string
-    instance_type = string
+    id       = string
+    owner_id = string
   })
   default = {
-    id            = "ami-04505e74c0741db8d"
-    owner_id      = "099720109477"
-    instance_type = "t3a.medium"
+    id       = "ami-04505e74c0741db8d"
+    owner_id = "099720109477"
   }
+}
+
+variable "instance_type" {
+  description = "The instance type for the EC2 instance. Default is t3a.medium."
+  type        = string
+  default     = "t3a.medium"
 }
 
 variable "monitoring_enabled" {
