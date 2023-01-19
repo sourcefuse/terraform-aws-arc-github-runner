@@ -36,6 +36,14 @@ resource "random_string" "runner" {
 ################################################################################
 data "aws_caller_identity" "this" {}
 
+data "aws_ssm_parameter" "runner_token" {
+  name = "/${var.namespace}/${var.environment}/github-runner/token"
+
+  depends_on = [
+    null_resource.prepare
+  ]
+}
+
 ################################################################################
 ## ssh
 ################################################################################
@@ -148,14 +156,15 @@ resource "aws_s3_object" "docker_compose" {
   key    = "docker-compose.yml"
 
   content_base64 = base64encode(templatefile("${path.module}/templates/docker-compose.yml.tftpl", {
-    runner_token        = var.runner_token
-    runner_organization = var.runner_organization
+    runner_token        = data.aws_ssm_parameter.runner_token.value
+    runner_organization = var.github_organization
     runner_name         = local.runner_name
     runner_labels       = var.runner_labels
   }))
 
   depends_on = [
-    module.runner
+    module.runner,
+    null_resource.prepare
   ]
 }
 
@@ -219,8 +228,33 @@ resource "aws_iam_role_policy_attachment" "runner" {
 ################################################################################
 ## configuration
 ################################################################################
-## install dependencies
-resource "aws_ssm_document" "runner" {
+## get token for the runner
+resource "null_resource" "prepare" {
+  triggers = {
+    namespace           = var.namespace
+    environment         = var.environment
+    github_token        = var.github_token
+    github_organization = var.github_organization
+    working_directory   = path.module
+    get_runner_token    = "${path.module}/scripts/get-runner-token.sh"
+  }
+
+  provisioner "local-exec" {
+    environment = {
+      NAMESPACE           = self.triggers.namespace
+      ENVIRONMENT         = self.triggers.environment
+      GITHUB_TOKEN        = self.triggers.github_token
+      GITHUB_ORGANIZATION = self.triggers.github_organization
+      WORKING_DIRECTORY   = self.triggers.working_directory
+    }
+    command = <<-EOT
+      ${self.triggers.get_runner_token} || true
+    EOT
+  }
+}
+
+## install host dependencies
+resource "aws_ssm_document" "dependencies" {
   name          = "${module.runner.name}-dependencies"
   document_type = "Command"
   target_type   = "/AWS::EC2::Instance"
@@ -259,10 +293,26 @@ resource "aws_ssm_document" "runner" {
   tags = merge(var.tags, tomap({
     Name = "${module.runner.name}-dependencies"
   }))
+
+  depends_on = [
+    null_resource.prepare
+  ]
+}
+
+resource "aws_ssm_association" "dependencies" {
+  for_each = { for k, v in local.ec2_runner_ssm_association : k => v }
+
+  name             = each.value.name
+  association_name = each.value.name
+
+  targets {
+    key    = "InstanceIds"
+    values = [module.runner.id]
+  }
 }
 
 ## download docker-compose then start container
-resource "aws_ssm_document" "docker_compose" {
+resource "aws_ssm_document" "runner_compose" {
   name          = module.runner.name
   document_type = "Command"
   target_type   = "/AWS::EC2::Instance"
@@ -294,23 +344,9 @@ resource "aws_ssm_document" "docker_compose" {
   }))
 }
 
-## add association
-resource "aws_ssm_association" "runner" {
-  for_each = { for k, v in local.ec2_runner_ssm_association : k => v }
-
-  name             = each.value.name
-  association_name = each.value.name
-
-  targets {
-    key    = "InstanceIds"
-    values = [module.runner.id]
-  }
-}
-
-## add scheduled association
-resource "aws_ssm_association" "scheduled" {
-  name             = aws_ssm_document.docker_compose.name
-  association_name = aws_ssm_document.docker_compose.name
+resource "aws_ssm_association" "runner_compose" {
+  name             = aws_ssm_document.runner_compose.name
+  association_name = aws_ssm_document.runner_compose.name
 
   apply_only_at_cron_interval = true
   schedule_expression         = "at(${trimsuffix(timeadd(timestamp(), "150s"), "Z")})" # TODO - do something better
@@ -327,12 +363,12 @@ resource "aws_ssm_association" "scheduled" {
   }
 }
 
-## remove runner
+## remove runner from github
 resource "null_resource" "cleanup" {
   triggers = {
-    runner_token        = var.runner_token
+    github_token        = var.github_token
     runner_name         = local.runner_name
-    runner_organization = var.runner_organization
+    github_organization = var.github_organization
     remove_runner       = "${path.module}/scripts/remove-runner.sh"
     working_directory   = path.module
   }
@@ -340,10 +376,10 @@ resource "null_resource" "cleanup" {
   provisioner "local-exec" {
     when = destroy
     environment = {
-      GITHUB_RUNNER_TOKEN        = self.triggers.runner_token
-      GITHUB_RUNNER_NAME         = self.triggers.runner_name
-      GITHUB_RUNNER_ORGANIZATION = self.triggers.runner_organization
-      WORKING_DIRECTORY          = self.triggers.working_directory
+      GITHUB_TOKEN        = self.triggers.github_token
+      GITHUB_RUNNER_NAME  = self.triggers.runner_name
+      GITHUB_ORGANIZATION = self.triggers.github_organization
+      WORKING_DIRECTORY   = self.triggers.working_directory
     }
     command = <<-EOT
       ${self.triggers.remove_runner} || true

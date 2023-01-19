@@ -4,7 +4,7 @@ locals {
       name = "AWS-UpdateSSMAgent"
     },
     {
-      name = aws_ssm_document.runner.name
+      name = aws_ssm_document.dependencies.name
     }
   ]
 

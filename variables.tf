@@ -107,13 +107,7 @@ variable "volume_tags_enabled" {
 ################################################################################
 ## runner
 ################################################################################
-variable "runner_token" {
-  description = "GitHub Runner token used for registering the runner to the Organization."
-  sensitive   = true
-  type        = string
-}
-
-variable "runner_organization" {
+variable "github_organization" {
   description = "GitHub Organization the runner belongs to."
   type        = string
   default     = "sourcefuse"
@@ -140,6 +134,16 @@ variable "runner_labels" {
 ################################################################################
 ## security
 ################################################################################
+variable "github_token" {
+  description = <<-EOT
+    GitHub Personal Access Token with `admin:org` permission scope.
+    This is used to obtain a Runner Token used for registering the runner.
+    For more information, see [Create a registration token for an organization](https://docs.github.com/en/rest/actions/self-hosted-runners?apiVersion=2022-11-28#create-a-registration-token-for-an-organization).
+  EOT
+  sensitive   = true
+  type        = string
+}
+
 variable "security_group_rules" {
   description = "Security group rules for the EC2 instance running the GitHub Runner"
   type = list(object({
