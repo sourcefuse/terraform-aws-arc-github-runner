@@ -51,16 +51,24 @@ data "aws_subnets" "private" {
   }
 }
 
+## TODO - this was manually added. add automation to get the token from github then add as ssm param
+data "aws_ssm_parameter" "runner_token" {
+  name = "/${var.namespace}/${var.environment}/github-runner/token"
+}
+
 ################################################################################
 ## runner
 ################################################################################
 module "runner" {
   source = "../"
 
-  namespace   = var.namespace
-  environment = var.environment
-  subnet_id   = local.private_subnet_ids[0]
-  vpc_id      = data.aws_vpc.this.id
+  namespace     = var.namespace
+  environment   = var.environment
+  region        = var.region
+  subnet_id     = local.private_subnet_ids[0]
+  vpc_id        = data.aws_vpc.this.id
+  runner_token  = data.aws_ssm_parameter.runner_token.value
+  runner_labels = "example,${var.namespace},${var.environment}"
 
   tags = module.tags.tags
 }
