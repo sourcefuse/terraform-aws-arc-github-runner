@@ -74,6 +74,7 @@ module "runner" {
   region        = var.region
   subnet_id     = local.private_subnet_ids[0]
   vpc_id        = data.aws_vpc.this.id
+  instance_type = "t2.micro"
   runner_token  = data.aws_ssm_parameter.runner_token.value
   runner_labels = "example,${var.namespace},${var.environment}"
 
