@@ -1,0 +1,24 @@
+# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
+version: v1.25.0
+# ignores vulnerabilities until expiry date; change duration by modifying expiry date
+ignore:
+  SNYK-CC-TF-56:
+    - resource > aws_security_group[external] > description:
+        reason: Module is referenced upstream and not managed by our Organization.
+        expires: "2024-01-01T00:00:00.000Z"
+        created: "2023-01-18T04:58:00.000Z"
+    - resource > aws_security_group[external] > description:
+        reason: Module is referenced upstream and not managed by our Organization.
+        expires: "2024-01-01T00:00:00.000Z"
+        created: "2023-01-18T04:58:00.000Z"
+  SNYK-CC-AWS-426:
+    - resource > aws_instance[default] > disable_api_termination:
+        reason: These are not highly available instances and can be terminated as needed.
+        expires: "2024-01-01T00:00:00.000Z"
+        created: "2023-01-18T04:58:00.000Z"
+  SNYK-CC-TF-127:
+    - resource > aws_s3_bucket_versioning[runner] > versioning_configuration > mfa_delete:
+        reason: Not currently needed with our SSO setup.
+        expires: "2024-01-01T00:00:00.000Z"
+        created: "2023-01-18T04:58:00.000Z"
+patch: {}
