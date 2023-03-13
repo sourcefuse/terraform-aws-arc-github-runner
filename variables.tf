@@ -107,10 +107,16 @@ variable "volume_tags_enabled" {
 ################################################################################
 ## runner
 ################################################################################
-variable "github_organization" {
-  description = "GitHub Organization the runner belongs to."
+variable "github_owner" {
+  description = "GitHub Owner the runner belongs to. If you are adding a repo, the format will be `owner/repo`"
   type        = string
   default     = "sourcefuse"
+}
+
+variable "repos_or_orgs" {
+  description = "Whether the API will register / deregister the runner in repos or orgs. Options are `orgs` and `repos`"
+  type        = string
+  default     = "orgs"
 }
 
 variable "runner_name" {
@@ -118,6 +124,7 @@ variable "runner_name" {
   type        = string
   default     = null
 }
+
 variable "runner_labels" {
   description = <<-EOT
     Labels to assign the GitHub Runner. If no values are given, the default labels will be:
