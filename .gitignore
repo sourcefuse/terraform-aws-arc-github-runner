@@ -3,8 +3,9 @@ terraform.tfstate
 *.tfstate*
 terraform.tfvars
 *.backup
-.idea 
+.idea
 .external_momdules
-/runner-id
-/registered-runners.json
-/errors.log
+runner-id
+*-id
+registered-runners.json
+errors.log

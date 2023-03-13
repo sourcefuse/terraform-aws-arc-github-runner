@@ -155,12 +155,16 @@ resource "aws_s3_object" "docker_compose" {
   bucket = aws_s3_bucket.runner.id
   key    = "docker-compose.yml"
 
-  content_base64 = base64encode(templatefile("${path.module}/templates/docker-compose.yml.tftpl", {
-    runner_token        = data.aws_ssm_parameter.runner_token.value
-    runner_organization = var.github_organization
-    runner_name         = local.runner_name
-    runner_labels       = var.runner_labels
-  }))
+  content_base64 = base64encode(
+    var.docker_compose_override != null ? var.docker_compose_override : templatefile(
+      "${path.module}/templates/docker-compose.yml.tftpl", {
+        runner_token        = data.aws_ssm_parameter.runner_token.value
+        runner_organization = var.github_organization
+        runner_name         = local.runner_name
+        runner_labels       = var.runner_labels
+      }
+    )
+  )
 
   depends_on = [
     module.runner,
@@ -372,15 +376,17 @@ resource "null_resource" "cleanup" {
     github_organization = var.github_organization
     remove_runner       = "${path.module}/scripts/remove-runner.sh"
     working_directory   = path.module
+    runner_id_out       = "${path.module}/${var.runner_name}-id"
   }
 
   provisioner "local-exec" {
     when = destroy
     environment = {
-      GITHUB_TOKEN        = self.triggers.github_token
-      GITHUB_RUNNER_NAME  = self.triggers.runner_name
-      GITHUB_ORGANIZATION = self.triggers.github_organization
-      WORKING_DIRECTORY   = self.triggers.working_directory
+      GITHUB_TOKEN         = self.triggers.github_token
+      GITHUB_RUNNER_NAME   = self.triggers.runner_name
+      GITHUB_ORGANIZATION  = self.triggers.github_organization
+      WORKING_DIRECTORY    = self.triggers.working_directory
+      GITHUB_RUNNER_ID_OUT = self.triggers.runner_id_out
     }
     // || true --> to avoid output of sensitive values if it fails
     command = <<-EOT

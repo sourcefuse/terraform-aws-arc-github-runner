@@ -107,6 +107,12 @@ variable "volume_tags_enabled" {
 ################################################################################
 ## runner
 ################################################################################
+variable "docker_compose_override" {
+  description = "Override the base `docker-compose.yml` used to create the runner container."
+  type        = string
+  default     = null
+}
+
 variable "github_organization" {
   description = "GitHub Organization the runner belongs to."
   type        = string

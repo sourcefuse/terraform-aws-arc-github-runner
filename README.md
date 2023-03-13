@@ -96,6 +96,7 @@ module "runner" {
 |------|-------------|------|---------|:--------:|
 | <a name="input_ami"></a> [ami](#input\_ami) | AMI information for the EC2 instance | <pre>object({<br>    id       = string<br>    owner_id = string<br>  })</pre> | <pre>{<br>  "id": "ami-04505e74c0741db8d",<br>  "owner_id": "099720109477"<br>}</pre> | no |
 | <a name="input_associate_public_ip_address"></a> [associate\_public\_ip\_address](#input\_associate\_public\_ip\_address) | Associate a public IP address with the instance | `bool` | `false` | no |
+| <a name="input_docker_compose_override"></a> [docker\_compose\_override](#input\_docker\_compose\_override) | Override the base `docker-compose.yml` used to create the runner container. | `string` | `null` | no |
 | <a name="input_ec2_runner_iam_role_policy_arns"></a> [ec2\_runner\_iam\_role\_policy\_arns](#input\_ec2\_runner\_iam\_role\_policy\_arns) | IAM role policies to attach to the Runner instance | `list(string)` | <pre>[<br>  "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",<br>  "arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM"<br>]</pre> | no |
 | <a name="input_environment"></a> [environment](#input\_environment) | Name of the environment, i.e. dev, stage, prod | `string` | n/a | yes |
 | <a name="input_github_organization"></a> [github\_organization](#input\_github\_organization) | GitHub Organization the runner belongs to. | `string` | `"sourcefuse"` | no |
