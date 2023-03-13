@@ -11,8 +11,12 @@ services:
         max_attempts: 3
         window: 45s
     environment:
+      %{ if repos_or_orgs == "orgs" }
+      RUNNER_ORGANIZATION_URL: "https://github.com/${runner_owner}"
+      %{ else }
+      RUNNER_REPOSITORY_URL: "https://github.com/${runner_owner}"
+      %{ endif }
       RUNNER_TOKEN: "${runner_token}"
-      RUNNER_ORGANIZATION_URL: "https://github.com/${runner_organization}"
       RUNNER_NAME: "${runner_name}"
       RUNNER_LABELS: "${runner_labels}"
       RUNNER_REPLACE_EXISTING: "true"
