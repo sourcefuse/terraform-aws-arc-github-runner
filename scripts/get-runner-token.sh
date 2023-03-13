@@ -5,10 +5,11 @@ GITHUB_TOKEN="${GITHUB_TOKEN}"
 AWS_REGION="${AWS_REGION:=us-east-1}"
 
 ## default
+REPOS_OR_ORGS="${REPOS_OR_ORGS:=orgs}"
 NAMESPACE="${NAMESPACE:-arc}"
 ENVIRONMENT="${ENVIRONMENT:-dev}"
 WORKING_DIRECTORY="${WORKING_DIRECTORY:=$PWD}"
-GITHUB_ORGANIZATION="${GITHUB_ORGANIZATION:-sourcefuse}"
+GITHUB_OWNER="${GITHUB_OWNER:-sourcefuse}"
 
 set -e
 
@@ -17,7 +18,7 @@ runner_token=$(curl -X POST \
   -H "Accept: application/vnd.github+json" \
   -H "Authorization: Bearer ${GITHUB_TOKEN}" \
   -H "X-GitHub-Api-Version: 2022-11-28" \
-  "https://api.github.com/orgs/${GITHUB_ORGANIZATION}/actions/runners/registration-token" | jq -r .token)
+  "https://api.github.com/${REPOS_OR_ORGS}/${GITHUB_OWNER}/actions/runners/registration-token" | jq -r .token)
 
 ## put the token in ssm
 aws ssm put-parameter \
