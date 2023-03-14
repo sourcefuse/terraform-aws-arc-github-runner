@@ -156,10 +156,11 @@ resource "aws_s3_object" "docker_compose" {
   key    = "docker-compose.yml"
 
   content_base64 = base64encode(templatefile("${path.module}/templates/docker-compose.yml.tftpl", {
-    runner_token        = data.aws_ssm_parameter.runner_token.value
-    runner_organization = var.github_organization
-    runner_name         = local.runner_name
-    runner_labels       = var.runner_labels
+    runner_token  = data.aws_ssm_parameter.runner_token.value
+    runner_owner  = var.github_owner
+    runner_name   = local.runner_name
+    runner_labels = var.runner_labels
+    repos_or_orgs = var.repos_or_orgs
   }))
 
   depends_on = [
@@ -231,21 +232,23 @@ resource "aws_iam_role_policy_attachment" "runner" {
 ## get token for the runner
 resource "null_resource" "prepare" {
   triggers = {
-    namespace           = var.namespace
-    environment         = var.environment
-    github_token        = var.github_token
-    github_organization = var.github_organization
-    working_directory   = path.module
-    get_runner_token    = "${path.module}/scripts/get-runner-token.sh"
+    namespace         = var.namespace
+    environment       = var.environment
+    github_token      = var.github_token
+    github_owner      = var.github_owner
+    repos_or_orgs     = var.repos_or_orgs
+    working_directory = path.module
+    get_runner_token  = "${path.module}/scripts/get-runner-token.sh"
   }
 
   provisioner "local-exec" {
     environment = {
-      NAMESPACE           = self.triggers.namespace
-      ENVIRONMENT         = self.triggers.environment
-      GITHUB_TOKEN        = self.triggers.github_token
-      GITHUB_ORGANIZATION = self.triggers.github_organization
-      WORKING_DIRECTORY   = self.triggers.working_directory
+      NAMESPACE         = self.triggers.namespace
+      ENVIRONMENT       = self.triggers.environment
+      GITHUB_TOKEN      = self.triggers.github_token
+      GITHUB_OWNER      = self.triggers.github_owner
+      REPOS_OR_ORGS     = self.triggers.repos_or_orgs
+      WORKING_DIRECTORY = self.triggers.working_directory
     }
     // || true --> to avoid output of sensitive values if it fails
     command = <<-EOT
@@ -333,7 +336,7 @@ resource "aws_ssm_document" "runner_compose" {
             "mkdir -p /opt/github-runner",
             "cd /opt/github-runner/",
             "aws s3 cp s3://${aws_s3_bucket.runner.id}/docker-compose.yml .",
-            "docker-compose up -d"
+            "docker-compose rm -fs && docker-compose up -d" // TODO - do something better
           ]
         }
       },
@@ -356,35 +359,41 @@ resource "aws_ssm_association" "runner_compose" {
     key    = "InstanceIds"
     values = [module.runner.id]
   }
-
-  lifecycle {
-    ignore_changes = [
-      schedule_expression
-    ]
-  }
+  #
+  #  lifecycle {
+  #    ignore_changes = [
+  #      schedule_expression
+  #    ]
+  #  }
 }
 
 ## remove runner from github
 resource "null_resource" "cleanup" {
   triggers = {
-    github_token        = var.github_token
-    runner_name         = local.runner_name
-    github_organization = var.github_organization
-    remove_runner       = "${path.module}/scripts/remove-runner.sh"
-    working_directory   = path.module
+    github_token      = var.github_token
+    runner_name       = local.runner_name
+    github_owner      = var.github_owner
+    repos_or_orgs     = var.repos_or_orgs
+    working_directory = path.module
+    remove_runner     = "${path.module}/scripts/remove-runner.sh"
   }
 
   provisioner "local-exec" {
     when = destroy
     environment = {
-      GITHUB_TOKEN        = self.triggers.github_token
-      GITHUB_RUNNER_NAME  = self.triggers.runner_name
-      GITHUB_ORGANIZATION = self.triggers.github_organization
-      WORKING_DIRECTORY   = self.triggers.working_directory
+      GITHUB_TOKEN       = self.triggers.github_token
+      GITHUB_RUNNER_NAME = self.triggers.runner_name
+      GITHUB_OWNER       = self.triggers.github_owner
+      REPOS_OR_ORGS      = self.triggers.repos_or_orgs
+      WORKING_DIRECTORY  = self.triggers.working_directory
     }
     // || true --> to avoid output of sensitive values if it fails
     command = <<-EOT
       ${self.triggers.remove_runner} || true
     EOT
   }
+
+  depends_on = [
+    aws_ssm_association.runner_compose
+  ]
 }
