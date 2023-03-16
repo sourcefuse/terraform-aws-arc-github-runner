@@ -1,6 +1,6 @@
 # terraform-refarch-github-runner
 
-[![Known Vulnerabilities](https://snyk.io/test/github/sourcefuse/terraform-refarch-github-runner/badge.svg)]
+[![Known Vulnerabilities](https://github.com/sourcefuse/terraform-refarch-github-runner/actions/workflows/snyk.yaml/badge.svg)](https://github.com/sourcefuse/terraform-refarch-github-runner/actions/workflows/snyk.yaml)
 ## Overview
 
 SourceFuse AWS Reference Architecture (ARC) Terraform module for managing GitHub Runner.  
