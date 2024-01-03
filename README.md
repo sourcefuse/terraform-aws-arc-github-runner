@@ -125,6 +125,8 @@ module "runner" {
 |------|-------------|
 | <a name="output_ec2_runner_instance_id"></a> [ec2\_runner\_instance\_id](#output\_ec2\_runner\_instance\_id) | Instance ID of the EC2 Runner |
 | <a name="output_ec2_runner_instance_name"></a> [ec2\_runner\_instance\_name](#output\_ec2\_runner\_instance\_name) | Instance Name of the EC2 Runner |
+| <a name="output_ec2_runner_role"></a> [ec2\_runner\_role](#output\_ec2\_runner\_role) | Instance role name |
+| <a name="output_ec2_runner_role_arn"></a> [ec2\_runner\_role\_arn](#output\_ec2\_runner\_role\_arn) | Instance role ARN |
 <!-- END OF PRE-COMMIT-TERRAFORM DOCS HOOK -->
 
 ## Development
