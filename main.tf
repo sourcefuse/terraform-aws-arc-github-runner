@@ -7,17 +7,17 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 4.0"
+      version = ">= 4.0"
     }
 
     random = {
       source  = "hashicorp/random"
-      version = "~> 3.0"
+      version = ">= 3.0"
     }
 
     null = {
       source  = "hashicorp/null"
-      version = "3.2.1"
+      version = ">= 3.0"
     }
   }
 }
@@ -159,6 +159,7 @@ resource "aws_s3_object" "docker_compose" {
     runner_token  = data.aws_ssm_parameter.runner_token.value
     runner_owner  = var.github_owner
     runner_name   = local.runner_name
+    runner_image  = var.runner_image
     runner_labels = var.runner_labels
     repos_or_orgs = var.repos_or_orgs
   }))

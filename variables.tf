@@ -125,6 +125,12 @@ variable "runner_name" {
   default     = null
 }
 
+variable "runner_image" {
+  description = "Name of the image to use for the Actions Runner."
+  type        = string
+  default     = "sourcefuse/github-runner:0.3.0"
+}
+
 variable "runner_labels" {
   description = <<-EOT
     Labels to assign the GitHub Runner. If no values are given, the default labels will be:

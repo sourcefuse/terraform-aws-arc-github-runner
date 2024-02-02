@@ -2,7 +2,7 @@ version: "3.9"
 name: "${runner_name}"
 services:
   runner:
-    image: sourcefuse/github-runner:0.2.0
+    image: ${runner_image}
     deploy:
       replicas: 1
       restart_policy:
