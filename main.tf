@@ -159,6 +159,7 @@ resource "aws_s3_object" "docker_compose" {
     runner_token  = data.aws_ssm_parameter.runner_token.value
     runner_owner  = var.github_owner
     runner_name   = local.runner_name
+    runner_user   = var.runner_user
     runner_image  = var.runner_image
     runner_labels = var.runner_labels
     repos_or_orgs = var.repos_or_orgs
