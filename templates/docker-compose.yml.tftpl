@@ -3,6 +3,7 @@ name: "${runner_name}"
 services:
   runner:
     image: ${runner_image}
+    user: ${runner_user}
     deploy:
       replicas: 1
       restart_policy:

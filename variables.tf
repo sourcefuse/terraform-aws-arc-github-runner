@@ -131,6 +131,12 @@ variable "runner_image" {
   default     = "sourcefuse/github-runner:0.3.0"
 }
 
+variable "runner_user" {
+  description = "Name of the user to run the container as."
+  type        = string
+  default     = "runner"
+}
+
 variable "runner_labels" {
   description = <<-EOT
     Labels to assign the GitHub Runner. If no values are given, the default labels will be:
