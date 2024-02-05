@@ -20,8 +20,8 @@
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_runner"></a> [runner](#module\_runner) | ../ | n/a |
-| <a name="module_tags"></a> [tags](#module\_tags) | git::https://github.com/sourcefuse/terraform-aws-refarch-tags.git | 1.1.0 |
+| <a name="module_runner"></a> [runner](#module\_runner) | sourcefuse/arc-github-runner/aws | 0.2.6 |
+| <a name="module_tags"></a> [tags](#module\_tags) | sourcefuse/arc-tags/aws | 1.2.5 |
 
 ## Resources
 

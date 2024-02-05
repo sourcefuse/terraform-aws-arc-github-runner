@@ -23,8 +23,8 @@ terraform {
 }
 
 module "tags" {
-  source = "git::https://github.com/sourcefuse/terraform-aws-refarch-tags.git?ref=1.1.0"
-
+  source      = "sourcefuse/arc-tags/aws"
+  version     = "1.2.5"
   environment = var.environment
   project     = "terraform-aws-refarch-github-runner"
 
@@ -67,8 +67,8 @@ data "aws_ssm_parameter" "github_token" {
 ## runner
 ################################################################################
 module "runner" {
-  source = "../"
-
+  source        = "sourcefuse/arc-github-runner/aws"
+  version       = "0.2.6"
   namespace     = var.namespace
   environment   = var.environment
   region        = var.region
