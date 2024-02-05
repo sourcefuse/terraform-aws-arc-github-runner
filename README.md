@@ -1,6 +1,9 @@
-# terraform-refarch-github-runner
+# [terraform-aws-arc-github-runner](https://github.com/sourcefuse/terraform-aws-arc-github-runner)
+
+[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=sourcefuse_terraform-aws-arc-github-runner)](https://sonarcloud.io/summary/new_code?id=sourcefuse_terraform-aws-arc-github-runner)
 
 [![Known Vulnerabilities](https://github.com/sourcefuse/terraform-refarch-github-runner/actions/workflows/snyk.yaml/badge.svg)](https://github.com/sourcefuse/terraform-refarch-github-runner/actions/workflows/snyk.yaml)
+
 ## Overview
 
 SourceFuse AWS Reference Architecture (ARC) Terraform module for managing GitHub Runner.  
@@ -34,11 +37,22 @@ data "aws_ssm_parameter" "github_token" {
 :warning: At this time, this module only supports **Debian** / **Ubuntu** AMIs.
 When choosing an AMI, please be sure to select either **Ubuntu** or **Debian**.  
 
-To see a full example, check out the [main.tf](./example/main.tf) file in the example folder.  
+To see a full example, check out the [main.tf](https://github.com/sourcefuse/terraform-aws-arc-github-runner/blob/main/example/main.tf) file in the example folder.  
 
 ```hcl
 module "runner" {
-  source = "git::https://github.com/sourcefuse/terraform-refarch-github-runner"
+  source  = "sourcefuse/arc-github-runner/aws"
+  version = "0.2.6"
+  namespace     = var.namespace
+  environment   = var.environment
+  region        = var.region
+  subnet_id     = local.private_subnet_ids[0]
+  vpc_id        = data.aws_vpc.this.id
+  instance_type = "t2.micro"
+  github_token  = data.aws_ssm_parameter.github_token.value
+  runner_labels = "example,${var.namespace},${var.environment}"
+
+  tags = module.tags.tags
 }
 ```
 
@@ -48,9 +62,9 @@ module "runner" {
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | ~> 1.3, < 2.0.0 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 4.0 |
-| <a name="requirement_null"></a> [null](#requirement\_null) | 3.2.1 |
-| <a name="requirement_random"></a> [random](#requirement\_random) | ~> 3.0 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 4.0 |
+| <a name="requirement_null"></a> [null](#requirement\_null) | >= 3.0 |
+| <a name="requirement_random"></a> [random](#requirement\_random) | >= 3.0 |
 
 ## Providers
 
@@ -85,8 +99,8 @@ module "runner" {
 | [aws_ssm_association.runner_compose](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssm_association) | resource |
 | [aws_ssm_document.dependencies](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssm_document) | resource |
 | [aws_ssm_document.runner_compose](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssm_document) | resource |
-| [null_resource.cleanup](https://registry.terraform.io/providers/hashicorp/null/3.2.1/docs/resources/resource) | resource |
-| [null_resource.prepare](https://registry.terraform.io/providers/hashicorp/null/3.2.1/docs/resources/resource) | resource |
+| [null_resource.cleanup](https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource) | resource |
+| [null_resource.prepare](https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource) | resource |
 | [random_string.runner](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/string) | resource |
 | [aws_caller_identity.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/caller_identity) | data source |
 | [aws_ssm_parameter.runner_token](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/ssm_parameter) | data source |
@@ -113,6 +127,7 @@ module "runner" {
 | <a name="input_runner_image"></a> [runner\_image](#input\_runner\_image) | Name of the image to use for the Actions Runner. | `string` | `"sourcefuse/github-runner:0.3.0"` | no |
 | <a name="input_runner_labels"></a> [runner\_labels](#input\_runner\_labels) | Labels to assign the GitHub Runner. If no values are given, the default labels will be:<br>  - `self-hosted`<br>  - Base OS, i.e. `Linux`<br>  - Architecture, i.e. `X64`<br>These labels cannot be overridden.<br>Separate labels via comma, i.e. `dev,docker,another_label` | `string` | `""` | no |
 | <a name="input_runner_name"></a> [runner\_name](#input\_runner\_name) | Name to assign the GitHub Runner. If no value is given, it will use the ec2 instance name. | `string` | `null` | no |
+| <a name="input_runner_user"></a> [runner\_user](#input\_runner\_user) | Name of the user to run the container as. | `string` | `"runner"` | no |
 | <a name="input_security_group_rules"></a> [security\_group\_rules](#input\_security\_group\_rules) | Security group rules for the EC2 instance running the GitHub Runner | <pre>list(object({<br>    type        = string<br>    from_port   = number<br>    to_port     = number<br>    protocol    = string<br>    cidr_blocks = list(string)<br>  }))</pre> | <pre>[<br>  {<br>    "cidr_blocks": [<br>      "0.0.0.0/0"<br>    ],<br>    "from_port": 0,<br>    "protocol": "-1",<br>    "to_port": 65535,<br>    "type": "egress"<br>  }<br>]</pre> | no |
 | <a name="input_ssm_patch_manager_enabled"></a> [ssm\_patch\_manager\_enabled](#input\_ssm\_patch\_manager\_enabled) | Whether to enable SSM Patch manager | `bool` | `true` | no |
 | <a name="input_subnet_id"></a> [subnet\_id](#input\_subnet\_id) | Subnet ID for the EC2 instance to be assigned to | `string` | n/a | yes |
@@ -148,6 +163,17 @@ module "runner" {
   pre-commit install
   ```
 
+### Git commits
+
+while Contributing or doing git commit please specify the breaking change in your commit message whether its major,minor or patch
+
+For Example
+
+```sh
+git commit -m "your commit message #major"
+```
+By specifying this , it will bump the version and if you dont specify this in your commit message then by default it will consider patch and will bump that accordingly
+
 ### Tests
 - Tests are available in `test` directory
 - Configure the dependencies
@@ -164,4 +190,4 @@ module "runner" {
 ## Authors
 
 This project is authored by:
-- SourceFuse
+- SourceFuse ARC Team
