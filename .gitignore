@@ -8,3 +8,4 @@ terraform.tfvars
 /runner-id
 /registered-runners.json
 /errors.log
+.DS_Store
