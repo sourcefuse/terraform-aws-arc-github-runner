@@ -15,6 +15,9 @@
 
 [![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=sourcefuse_terraform-aws-arc-github-runner)](https://sonarcloud.io/summary/new_code?id=sourcefuse_terraform-aws-arc-github-runner)
 
+> [!TIP]
+> 🤖 **New:** Use this module with AI assistants via the [ARC IaC MCP Server](https://github.com/sourcefuse/arc-iac-mcp) — search, scaffold, and security-scan ARC modules from natural language. [Quick setup ↓](#ai-assistant-integration-arc-iac-mcp)
+
 ## Overview
 
 Deploys a self-hosted GitHub Actions runner on an EC2 instance with auto-registration, SSM access, and configurable labels.
