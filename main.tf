@@ -138,11 +138,6 @@ resource "aws_s3_bucket_logging" "runner" {
   target_prefix = "log/"
 }
 
-resource "aws_s3_bucket_acl" "runner" {
-  bucket = aws_s3_bucket.runner.id
-  acl    = "private"
-}
-
 resource "aws_s3_bucket_versioning" "runner" {
   bucket = aws_s3_bucket.runner.id
 
