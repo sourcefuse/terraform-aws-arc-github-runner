@@ -229,6 +229,11 @@ resource "aws_iam_role_policy_attachment" "runner" {
 ## get token for the runner
 resource "null_resource" "prepare" {
   triggers = {
+    # Refresh the runner registration token on EVERY apply. GitHub registration
+    # tokens expire in ~1h; with static triggers this ran only on the first
+    # apply, so re-registration (session drop / container recreate) later failed
+    # with 404 and the runner went Offline. timestamp() forces a fresh token.
+    always_run        = timestamp()
     namespace         = var.namespace
     environment       = var.environment
     github_token      = var.github_token
