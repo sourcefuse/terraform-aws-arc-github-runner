@@ -125,23 +125,20 @@ variable "runner_name" {
   default     = null
 }
 
-variable "runner_image" {
+variable "runner_version" {
   description = <<-EOT
-    Container image for the Actions Runner. Must be an image that ships a
-    runner version at or above GitHub's current minimum. Images that bake in an
-    old runner (e.g. sourcefuse/github-runner:0.3.0 -> runner 2.312.0) are forced
-    into an in-container self-update that cannot apply, leaving the runner
-    permanently Offline. myoung34/github-runner is actively maintained and ships
-    a current runner, paired with DISABLE_AUTO_UPDATE in the compose template.
+    Version of the official GitHub Actions runner (github.com/actions/runner) to
+    install on the host. Pin at or above GitHub's current minimum so the runner
+    is never forced into a self-update. See the releases page for the latest tag.
   EOT
   type        = string
-  default     = "myoung34/github-runner:latest"
+  default     = "2.336.0"
 }
 
 variable "runner_user" {
-  description = "Name of the user to run the container as."
+  description = "OS user that owns and runs the runner systemd service. Created if it does not exist."
   type        = string
-  default     = "runner"
+  default     = "ubuntu"
 }
 
 variable "runner_labels" {
