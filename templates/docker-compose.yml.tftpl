@@ -3,23 +3,28 @@ name: "${runner_name}"
 services:
   runner:
     image: ${runner_image}
-    user: ${runner_user}
-    deploy:
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
-        window: 45s
+    restart: always
     environment:
-      %{ if repos_or_orgs == "orgs" }
-      RUNNER_ORGANIZATION_URL: "https://github.com/${runner_owner}"
-      %{ else }
-      RUNNER_REPOSITORY_URL: "https://github.com/${runner_owner}"
-      %{ endif }
-      RUNNER_TOKEN: "${runner_token}"
+%{ if repos_or_orgs == "orgs" ~}
+      RUNNER_SCOPE: "org"
+      ORG_NAME: "${runner_owner}"
+%{ else ~}
+      RUNNER_SCOPE: "repo"
+      REPO_URL: "https://github.com/${runner_owner}"
+%{ endif ~}
       RUNNER_NAME: "${runner_name}"
-      RUNNER_LABELS: "${runner_labels}"
+      RUNNER_TOKEN: "${runner_token}"
+      LABELS: "${runner_labels}"
+      RUNNER_WORKDIR: "/tmp/runner/work"
+      # The runner binary is used as shipped in the image. GitHub forces a
+      # self-update when a runner is below the required minimum version, but an
+      # in-container self-update cannot replace its own running binary and
+      # relaunches the old one, leaving the runner permanently Offline. We instead
+      # track a maintained image (myoung34/github-runner) that ships a current
+      # runner, so no update is ever needed.
+      DISABLE_AUTO_UPDATE: "true"
+      # Re-register under the same name on restart instead of failing.
       RUNNER_REPLACE_EXISTING: "true"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/runner:/tmp/runner

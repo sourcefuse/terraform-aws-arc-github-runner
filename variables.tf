@@ -126,9 +126,16 @@ variable "runner_name" {
 }
 
 variable "runner_image" {
-  description = "Name of the image to use for the Actions Runner."
+  description = <<-EOT
+    Container image for the Actions Runner. Must be an image that ships a
+    runner version at or above GitHub's current minimum. Images that bake in an
+    old runner (e.g. sourcefuse/github-runner:0.3.0 -> runner 2.312.0) are forced
+    into an in-container self-update that cannot apply, leaving the runner
+    permanently Offline. myoung34/github-runner is actively maintained and ships
+    a current runner, paired with DISABLE_AUTO_UPDATE in the compose template.
+  EOT
   type        = string
-  default     = "sourcefuse/github-runner:0.3.0"
+  default     = "myoung34/github-runner:latest"
 }
 
 variable "runner_user" {
