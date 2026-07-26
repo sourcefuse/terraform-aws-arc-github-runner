@@ -150,6 +150,16 @@ variable "runner_labels" {
   default     = ""
 }
 
+variable "docker_compose_yaml_override" {
+  description = <<-EOT
+    This var allows the downstream module to override the docker-compose.yaml template used by this module.
+    When you set this variable, you own the docker compose stack for the runner."
+    Validate your docker-compose.yaml and pass it as a string. This module will bas64encode it.
+  EOT
+  type        = string
+  default     = null
+}
+
 ################################################################################
 ## security
 ################################################################################

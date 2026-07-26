@@ -155,15 +155,7 @@ resource "aws_s3_object" "docker_compose" {
   bucket = aws_s3_bucket.runner.id
   key    = "docker-compose.yml"
 
-  content_base64 = base64encode(templatefile("${path.module}/templates/docker-compose.yml.tftpl", {
-    runner_token  = data.aws_ssm_parameter.runner_token.value
-    runner_owner  = var.github_owner
-    runner_name   = local.runner_name
-    runner_user   = var.runner_user
-    runner_image  = var.runner_image
-    runner_labels = var.runner_labels
-    repos_or_orgs = var.repos_or_orgs
-  }))
+  content_base64 = local.docker_compose_config
 
   depends_on = [
     module.runner,
