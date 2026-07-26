@@ -188,7 +188,7 @@ resource "aws_ssm_document" "dependencies" {
         action = "aws:runShellScript"
         inputs = {
           runCommand = [
-            "set -euxo pipefail",
+            "set -eux",
             "export DEBIAN_FRONTEND=noninteractive",
             "apt-get update",
             # Runner runtime deps (libicu for .NET) + general CI utilities.
@@ -251,7 +251,7 @@ resource "aws_ssm_document" "runner_install" {
         action = "aws:runShellScript"
         inputs = {
           runCommand = [
-            "set -euxo pipefail",
+            "set -eux",
             "RUNNER_DIR=/opt/actions-runner",
             "RUNNER_USER=${var.runner_user}",
             "RUNNER_VERSION=${var.runner_version}",
