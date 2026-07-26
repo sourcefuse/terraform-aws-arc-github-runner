@@ -193,6 +193,11 @@ resource "aws_ssm_document" "dependencies" {
             "apt-get update",
             # Runner runtime deps (libicu for .NET) + general CI utilities.
             "apt-get install -y ca-certificates curl gnupg lsb-release unzip jq git tar libicu70 || apt-get install -y ca-certificates curl gnupg lsb-release unzip jq git tar libicu-dev",
+            # Node.js — required on the host PATH by the hashicorp/setup-terraform
+            # wrapper (a #!/usr/bin/env node script). GitHub-hosted runners ship node;
+            # a self-hosted host does not, so without this every setup-terraform job
+            # fails with "/usr/bin/env: 'node': No such file or directory" (exit 127).
+            "if ! command -v node >/dev/null; then curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y nodejs; fi",
             # AWS CLI v2
             "if ! command -v aws >/dev/null; then cd /tmp && curl -fsSL 'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip' -o awscliv2.zip && unzip -o awscliv2.zip && ./aws/install --update; fi",
             # kubectl (latest stable)
