@@ -258,6 +258,14 @@ resource "aws_ssm_document" "runner_install" {
             "GH_URL=https://github.com/${var.github_owner}",
             # Already configured (e.g. re-run of the association) -> ensure the service is up and exit.
             "if [ -f \"$RUNNER_DIR/.runner\" ]; then (cd \"$RUNNER_DIR\" && ./svc.sh start || true); exit 0; fi",
+            # Install the essentials the runner needs to download/register AND that
+            # actions/checkout needs (git) BEFORE the runner comes Online. This makes
+            # registration self-sufficient regardless of when the separate CI-tooling
+            # association (aws/kubectl/helm/terraform) finishes, so the first job's
+            # checkout can never lose a race against tool installation.
+            "export DEBIAN_FRONTEND=noninteractive",
+            "apt-get update -qq || true",
+            "apt-get install -y -qq git curl tar unzip jq ca-certificates || true",
             "id -u \"$RUNNER_USER\" >/dev/null 2>&1 || useradd -m -s /bin/bash \"$RUNNER_USER\"",
             "mkdir -p \"$RUNNER_DIR\" && cd \"$RUNNER_DIR\"",
             "curl -fsSL -o runner.tar.gz \"https://github.com/actions/runner/releases/download/v$${RUNNER_VERSION}/actions-runner-linux-x64-$${RUNNER_VERSION}.tar.gz\"",
