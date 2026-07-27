@@ -7,7 +7,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = ">= 4.0"
+      version = ">= 5.0, < 6.0"
     }
 
     random = {
@@ -37,93 +37,79 @@ resource "random_string" "runner" {
 data "aws_caller_identity" "this" {}
 
 ################################################################################
-## ssh
-################################################################################
-module "ssh_key_pair" {
-  source = "git::https://github.com/cloudposse/terraform-aws-key-pair?ref=0.18.3"
-
-  namespace             = var.namespace
-  stage                 = var.environment
-  name                  = "github-runner-${random_string.runner.result}"
-  ssh_public_key_path   = "${path.root}/secrets"
-  generate_ssh_key      = "true"
-  private_key_extension = ".pem"
-  public_key_extension  = ".pub"
-
-  tags = var.tags
-}
-
-################################################################################
-## ec2
+## ec2 — self-hosted GitHub Actions runner (SourceFuse arc-ec2)
 ################################################################################
 module "runner" {
-  source = "git::https://github.com/cloudposse/terraform-aws-ec2-instance?ref=0.45.2"
+  source  = "sourcefuse/arc-ec2/aws"
+  version = "0.0.5"
 
-  name         = "github-runner-${random_string.runner.result}"
-  namespace    = var.namespace
-  stage        = var.environment
-  ssh_key_pair = module.ssh_key_pair.key_name
-  vpc_id       = var.vpc_id
-  subnet       = var.subnet_id
-
-  ## ami / size
-  ami           = var.ami.id
-  ami_owner     = var.ami.owner_id
+  name          = local.ec2_name
+  vpc_id        = var.vpc_id
+  subnet_id     = var.subnet_id
+  ami_id        = var.ami.id
   instance_type = var.instance_type
 
-  ## monitoring / ssm / volume
-  monitoring                   = var.monitoring_enabled
-  ssm_patch_manager_enabled    = var.ssm_patch_manager_enabled
-  associate_public_ip_address  = var.associate_public_ip_address
-  root_block_device_encrypted  = var.root_block_device_encrypted
-  root_block_device_kms_key_id = var.root_block_device_kms_key_id
-  root_volume_size             = var.root_volume_size
-  root_volume_type             = var.root_volume_type
-  volume_tags_enabled          = var.volume_tags_enabled
+  associate_public_ip_address = var.associate_public_ip_address
+  enable_detailed_monitoring  = var.monitoring_enabled
 
-  ## security
-  security_group_rules = var.security_group_rules
+  root_block_device_data = {
+    volume_size = var.root_volume_size
+    volume_type = var.root_volume_type
+    encrypted   = var.root_block_device_encrypted
+    kms_key_id  = var.root_block_device_kms_key_id
+  }
+
+  # Egress-only security group. The runner reaches GitHub / SSM / package repos
+  # outbound; there is no inbound path (access is via SSM Session Manager, not SSH).
+  security_group_data = {
+    create        = true
+    name          = "${local.ec2_name}-sg"
+    description   = "Self-hosted GitHub Actions runner"
+    ingress_rules = []
+    egress_rules = [
+      {
+        description = "All outbound (GitHub, SSM, package repositories)"
+        from_port   = 0
+        to_port     = 0
+        protocol    = "-1"
+        cidr_blocks = ["0.0.0.0/0"]
+      }
+    ]
+  }
+
+  # Instance role (arc-ec2 builds the role + instance profile):
+  #   - managed: SSM core, so the instance is SSM-managed (used for all provisioning)
+  #   - inline:  read the registration token from SSM Parameter Store at runtime
+  #              (SecureString -> AWS-managed SSM key, hence kms:Decrypt)
+  instance_profile_data = {
+    create              = true
+    managed_policy_arns = var.ec2_runner_iam_role_policy_arns
+    policy_documents = [
+      {
+        name = "${local.ec2_name}-token-read"
+        policy = jsonencode({
+          Version = "2012-10-17",
+          Statement = [
+            {
+              Effect   = "Allow",
+              Action   = ["ssm:GetParameter"],
+              Resource = "arn:aws:ssm:${var.region}:${data.aws_caller_identity.this.account_id}:parameter/${var.namespace}/${var.environment}/github-runner/token"
+            },
+            {
+              Effect   = "Allow",
+              Action   = ["kms:Decrypt"],
+              Resource = "arn:aws:kms:${var.region}:${data.aws_caller_identity.this.account_id}:alias/aws/ssm"
+            }
+          ]
+        })
+      }
+    ]
+  }
 
   tags = merge(var.tags, tomap({
     GitHubRunnerName   = local.runner_name
     GitHubRunnerLabels = local.aws_friendly_runner_labels
   }))
-}
-
-################################################################################
-## iam
-################################################################################
-# Base policies for the instance (SSM core, etc.).
-resource "aws_iam_role_policy_attachment" "runner" {
-  for_each = toset(var.ec2_runner_iam_role_policy_arns)
-
-  role       = module.runner.role
-  policy_arn = each.value
-}
-
-# The install step reads the registration token from SSM Parameter Store at
-# runtime using the instance profile, so the short-lived token never has to be
-# baked into a document. SecureString params are encrypted with the AWS-managed
-# SSM key, hence the kms:Decrypt grant.
-resource "aws_iam_role_policy" "runner_token_read" {
-  name = "${module.runner.name}-token-read"
-  role = module.runner.role
-
-  policy = jsonencode({
-    Version = "2012-10-17",
-    Statement = [
-      {
-        Effect   = "Allow",
-        Action   = ["ssm:GetParameter"],
-        Resource = "arn:aws:ssm:${var.region}:${data.aws_caller_identity.this.account_id}:parameter/${var.namespace}/${var.environment}/github-runner/token"
-      },
-      {
-        Effect   = "Allow",
-        Action   = ["kms:Decrypt"],
-        Resource = "arn:aws:kms:${var.region}:${data.aws_caller_identity.this.account_id}:alias/aws/ssm"
-      }
-    ]
-  })
 }
 
 ################################################################################
@@ -163,10 +149,10 @@ resource "null_resource" "prepare" {
 }
 
 ## Install host dependencies plus the tooling the pipeline jobs need
-## (aws, kubectl, helm, terraform, git, docker). Runs immediately via the
+## (aws, kubectl, helm, terraform, git, node, docker). Runs immediately via the
 ## association below.
 resource "aws_ssm_document" "dependencies" {
-  name          = "${module.runner.name}-dependencies"
+  name          = "${local.ec2_name}-dependencies"
   document_type = "Command"
   target_type   = "/AWS::EC2::Instance"
 
@@ -208,7 +194,7 @@ resource "aws_ssm_document" "dependencies" {
   })
 
   tags = merge(var.tags, tomap({
-    Name = "${module.runner.name}-dependencies"
+    Name = "${local.ec2_name}-dependencies"
   }))
 
   depends_on = [
@@ -234,7 +220,7 @@ resource "aws_ssm_association" "dependencies" {
 ## so the short-lived registration token is only needed once). This avoids the
 ## container-image self-update failure that left the runner permanently Offline.
 resource "aws_ssm_document" "runner_install" {
-  name          = module.runner.name
+  name          = local.ec2_name
   document_type = "Command"
   target_type   = "/AWS::EC2::Instance"
 
@@ -282,7 +268,7 @@ resource "aws_ssm_document" "runner_install" {
   })
 
   tags = merge(var.tags, tomap({
-    Name = module.runner.name
+    Name = local.ec2_name
   }))
 }
 

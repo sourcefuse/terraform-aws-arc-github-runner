@@ -62,12 +62,6 @@ variable "monitoring_enabled" {
   default     = true
 }
 
-variable "ssm_patch_manager_enabled" {
-  description = "Whether to enable SSM Patch manager"
-  type        = bool
-  default     = true
-}
-
 variable "associate_public_ip_address" {
   description = "Associate a public IP address with the instance"
   type        = bool
@@ -96,12 +90,6 @@ variable "root_volume_type" {
   description = "Type of root volume. Can be standard, gp2, gp3, io1 or io2"
   type        = string
   default     = "gp2"
-}
-
-variable "volume_tags_enabled" {
-  description = "Whether or not to copy instance tags to root and EBS volumes"
-  type        = bool
-  default     = true
 }
 
 ################################################################################
@@ -165,26 +153,6 @@ variable "github_token" {
   EOT
   sensitive   = true
   type        = string
-}
-
-variable "security_group_rules" {
-  description = "Security group rules for the EC2 instance running the GitHub Runner"
-  type = list(object({
-    type        = string
-    from_port   = number
-    to_port     = number
-    protocol    = string
-    cidr_blocks = list(string)
-  }))
-  default = [
-    {
-      type        = "egress"
-      from_port   = 0
-      to_port     = 65535
-      protocol    = "-1"
-      cidr_blocks = ["0.0.0.0/0"]
-    }
-  ]
 }
 
 variable "ec2_runner_iam_role_policy_arns" {
