@@ -36,14 +36,6 @@ resource "random_string" "runner" {
 ################################################################################
 data "aws_caller_identity" "this" {}
 
-data "aws_ssm_parameter" "runner_token" {
-  name = "/${var.namespace}/${var.environment}/github-runner/token"
-
-  depends_on = [
-    null_resource.prepare
-  ]
-}
-
 ################################################################################
 ## ssh
 ################################################################################
