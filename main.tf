@@ -10,25 +10,11 @@ terraform {
       version = ">= 5.0, < 6.0"
     }
 
-    random = {
-      source  = "hashicorp/random"
-      version = ">= 3.0"
-    }
-
     null = {
       source  = "hashicorp/null"
       version = ">= 3.0"
     }
   }
-}
-
-resource "random_string" "runner" {
-  length      = 4
-  lower       = true
-  numeric     = true
-  min_numeric = 1
-  special     = false
-  upper       = false
 }
 
 ################################################################################
