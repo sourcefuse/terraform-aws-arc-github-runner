@@ -5,15 +5,15 @@ output "ec2_runner_instance_id" {
 
 output "ec2_runner_instance_name" {
   description = "Instance Name of the EC2 Runner"
-  value       = module.runner.name
+  value       = local.ec2_name
 }
 
 output "ec2_runner_role" {
-  description = "Instance role name"
-  value       = module.runner.role
+  description = "Instance role name (created by arc-ec2 as <name>-role)"
+  value       = "${local.ec2_name}-role"
 }
 
 output "ec2_runner_role_arn" {
   description = "Instance role ARN"
-  value       = module.runner.role_arn
+  value       = "arn:aws:iam::${data.aws_caller_identity.this.account_id}:role/${local.ec2_name}-role"
 }

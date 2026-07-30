@@ -62,12 +62,6 @@ variable "monitoring_enabled" {
   default     = true
 }
 
-variable "ssm_patch_manager_enabled" {
-  description = "Whether to enable SSM Patch manager"
-  type        = bool
-  default     = true
-}
-
 variable "associate_public_ip_address" {
   description = "Associate a public IP address with the instance"
   type        = bool
@@ -98,12 +92,6 @@ variable "root_volume_type" {
   default     = "gp2"
 }
 
-variable "volume_tags_enabled" {
-  description = "Whether or not to copy instance tags to root and EBS volumes"
-  type        = bool
-  default     = true
-}
-
 ################################################################################
 ## runner
 ################################################################################
@@ -125,16 +113,20 @@ variable "runner_name" {
   default     = null
 }
 
-variable "runner_image" {
-  description = "Name of the image to use for the Actions Runner."
+variable "runner_version" {
+  description = <<-EOT
+    Version of the official GitHub Actions runner (github.com/actions/runner) to
+    install on the host. Pin at or above GitHub's current minimum so the runner
+    is never forced into a self-update. See the releases page for the latest tag.
+  EOT
   type        = string
-  default     = "sourcefuse/github-runner:0.3.0"
+  default     = "2.336.0"
 }
 
 variable "runner_user" {
-  description = "Name of the user to run the container as."
+  description = "OS user that owns and runs the runner systemd service. Created if it does not exist."
   type        = string
-  default     = "runner"
+  default     = "ubuntu"
 }
 
 variable "runner_labels" {
@@ -161,26 +153,6 @@ variable "github_token" {
   EOT
   sensitive   = true
   type        = string
-}
-
-variable "security_group_rules" {
-  description = "Security group rules for the EC2 instance running the GitHub Runner"
-  type = list(object({
-    type        = string
-    from_port   = number
-    to_port     = number
-    protocol    = string
-    cidr_blocks = list(string)
-  }))
-  default = [
-    {
-      type        = "egress"
-      from_port   = 0
-      to_port     = 65535
-      protocol    = "-1"
-      cidr_blocks = ["0.0.0.0/0"]
-    }
-  ]
 }
 
 variable "ec2_runner_iam_role_policy_arns" {
