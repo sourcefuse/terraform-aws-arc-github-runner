@@ -2,22 +2,12 @@
 ## defaults
 ################################################################################
 terraform {
-  required_version = "~> 1.3, < 2.0.0"
+  required_version = ">= 1.5.0, < 2.0.0"
 
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 4.0"
-    }
-
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.0"
-    }
-
-    null = {
-      source  = "hashicorp/null"
-      version = "3.2.1"
+      version = ">= 5.40, < 6.0"
     }
   }
 }
@@ -37,10 +27,6 @@ provider "aws" {
   region = var.region
 }
 
-provider "random" {}
-
-provider "null" {}
-
 ################################################################################
 ## lookups
 ################################################################################
@@ -58,23 +44,54 @@ data "aws_subnets" "private" {
   }
 }
 
-## this was manually obtained from github then added to ssm param.
+data "aws_ami" "ubuntu" {
+  most_recent = true
+  owners      = ["099720109477"] # Canonical
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = ["x86_64"]
+  }
+
+  filter {
+    name   = "root-device-type"
+    values = ["ebs"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
+## GitHub PAT stored as an SSM SecureString. This must be separate from the
+## /github-runner/token parameter the root module creates for registration.
 data "aws_ssm_parameter" "github_token" {
-  name = "/${var.namespace}/${var.environment}/github/token"
+  name            = var.github_token_ssm_path
+  with_decryption = true
 }
 
 ################################################################################
 ## runner
 ################################################################################
 module "runner" {
-  source        = "sourcefuse/arc-github-runner/aws"
-  version       = "0.2.6"
+  source = "../../"
+
   namespace     = var.namespace
   environment   = var.environment
   region        = var.region
   subnet_id     = local.private_subnet_ids[0]
   vpc_id        = data.aws_vpc.this.id
-  instance_type = "t2.micro"
+  instance_type = "t3.micro"
+  ami = {
+    id       = data.aws_ami.ubuntu.id
+    owner_id = "099720109477"
+  }
   github_token  = data.aws_ssm_parameter.github_token.value
   runner_labels = "example,${var.namespace},${var.environment}"
 

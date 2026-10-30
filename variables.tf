@@ -23,16 +23,112 @@ variable "tags" {
 }
 
 ################################################################################
+## ec2 runner
+################################################################################
+variable "create_ec2_runner" {
+  type        = bool
+  description = "Whether to create the EC2 (SSM managed) runner. Set to false when only EKS runners are needed (eks_runner_config.create = true)."
+  default     = true
+}
+
+################################################################################
+## eks runner
+################################################################################
+variable "eks_runner_config" {
+  nullable = false
+  type = object({
+    create            = optional(bool, false)
+    cluster_name      = optional(string)
+    github_config_url = optional(string)
+    oidc_provider_arn = optional(string)
+    name_prefix       = optional(string)
+
+    k8s_namespace               = optional(string)
+    create_k8s_namespace        = optional(bool)
+    k8s_namespace_labels        = optional(map(string))
+    controller_namespace        = optional(string)
+    create_controller_namespace = optional(bool)
+
+    install_controller = optional(bool)
+    controller_service_account = optional(object({
+      name      = string
+      namespace = string
+    }))
+    chart_oci_registry      = optional(string)
+    chart_version           = optional(string)
+    controller_release_name = optional(string)
+    controller_values       = optional(list(string))
+    helm_timeout            = optional(number)
+    helm_max_history        = optional(number)
+
+    runner_scale_sets = optional(any)
+
+    existing_github_config_secret_name = optional(string)
+    github_auth_method                 = optional(string)
+    github_app_id                      = optional(string)
+    github_app_installation_id         = optional(string)
+
+    iam_auth_type                 = optional(string)
+    iam_role_path                 = optional(string)
+    iam_role_permissions_boundary = optional(string)
+
+    install_ebs_csi_driver    = optional(bool)
+    ebs_csi_addon_version     = optional(string)
+    ebs_csi_kms_key_arn       = optional(string)
+    create_storage_class      = optional(bool)
+    storage_class_name        = optional(string)
+    storage_class_is_default  = optional(bool)
+    storage_class_provisioner = optional(string)
+    storage_class_volume_type = optional(string)
+  })
+  description = <<-EOT
+    EKS runner configuration. Set `create = true` to deploy autoscaling, ephemeral
+    runner scale sets on an existing EKS cluster (official Actions Runner
+    Controller charts). Attributes map 1:1 to the inputs of
+    [`modules/eks-runner`](./modules/eks-runner), where defaults, validation and
+    full descriptions live. Unset attributes use the submodule defaults.
+    Required when create = true: cluster_name, github_config_url.
+
+    Credentials are passed separately as sensitive inputs: `github_token` (PAT)
+    or `github_app_private_key` (GitHub App).
+
+    Example:
+      eks_runner_config = {
+        create             = true
+        cluster_name       = "my-eks-cluster"
+        github_config_url  = "https://github.com/my-org"
+        github_auth_method = "pat"
+        runner_scale_sets = {
+          default = { min_runners = 1, max_runners = 10 }
+        }
+      }
+  EOT
+  default = {
+    create = false
+  }
+
+  validation {
+    condition = !var.eks_runner_config.create || (
+      try(length(var.eks_runner_config.cluster_name) > 0, false) &&
+      try(length(var.eks_runner_config.github_config_url) > 0, false)
+    )
+    error_message = "eks_runner_config.cluster_name and eks_runner_config.github_config_url are required when eks_runner_config.create is true."
+  }
+}
+
+################################################################################
 ## network
 ################################################################################
 variable "vpc_id" {
   type        = string
-  description = "VPC ID for EC2 instance to reside in"
+  description = "VPC ID for EC2 instance to reside in. Required when create_ec2_runner is true."
+  default     = null
 }
 
 variable "subnet_id" {
   type        = string
-  description = "Subnet ID for the EC2 instance to be assigned to"
+  description = "Subnet ID for the EC2 instance to be assigned to. Required when create_ec2_runner is true."
+  default     = null
 }
 
 ################################################################################
@@ -147,12 +243,21 @@ variable "runner_labels" {
 ################################################################################
 variable "github_token" {
   description = <<-EOT
-    GitHub Personal Access Token with `admin:org` permission scope.
-    This is used to obtain a Runner Token used for registering the runner.
-    For more information, see [Create a registration token for an organization](https://docs.github.com/en/rest/actions/self-hosted-runners?apiVersion=2022-11-28#create-a-registration-token-for-an-organization).
+    GitHub Personal Access Token.
+    - EC2 runner (create_ec2_runner): required, with `admin:org` scope. Used to obtain a runner registration token, see
+      [Create a registration token for an organization](https://docs.github.com/en/rest/actions/self-hosted-runners?apiVersion=2022-11-28#create-a-registration-token-for-an-organization).
+    - EKS runner (eks_runner_config.create): used when eks_runner_config.github_auth_method is "pat".
   EOT
   sensitive   = true
   type        = string
+  default     = null
+}
+
+variable "github_app_private_key" {
+  description = "GitHub App private key (PEM). Used by the EKS runner when eks_runner_config.github_auth_method is \"github_app\"."
+  sensitive   = true
+  type        = string
+  default     = null
 }
 
 variable "ec2_runner_iam_role_policy_arns" {
