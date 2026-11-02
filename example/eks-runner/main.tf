@@ -12,7 +12,7 @@ terraform {
 
     helm = {
       source  = "hashicorp/helm"
-      version = ">= 2.12, < 3.0"
+      version = ">= 3.0, < 4.0"
     }
 
     kubernetes = {
@@ -75,11 +75,11 @@ provider "kubernetes" {
 
 
 provider "helm" {
-  kubernetes {
+  kubernetes = {
     host                   = data.aws_eks_cluster.this.endpoint
     cluster_ca_certificate = base64decode(data.aws_eks_cluster.this.certificate_authority[0].data)
 
-    exec {
+    exec = {
       api_version = "client.authentication.k8s.io/v1beta1"
       command     = "aws"
       args = [
@@ -128,7 +128,7 @@ module "github_runner" {
     runner_scale_sets = {
       # General purpose pool: Docker-in-Docker for docker build/run jobs.
       default = {
-        name           = "${var.namespace}-${var.environment}-github-runner"
+        name           = var.runner_name
         container_mode = "dind"
         min_runners    = var.min_runners
         max_runners    = var.max_runners

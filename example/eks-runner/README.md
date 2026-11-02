@@ -58,7 +58,7 @@ terraform destroy
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.5.0, < 2.0.0 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 5.40, < 6.0 |
-| <a name="requirement_helm"></a> [helm](#requirement\_helm) | >= 2.12, < 3.0 |
+| <a name="requirement_helm"></a> [helm](#requirement\_helm) | >= 3.0, < 4.0 |
 | <a name="requirement_kubernetes"></a> [kubernetes](#requirement\_kubernetes) | >= 2.20, < 4.0 |
 
 ## Providers
@@ -96,6 +96,7 @@ terraform destroy
 | <a name="input_min_runners"></a> [min\_runners](#input\_min\_runners) | Minimum number of idle runners kept warm in the default scale set. | `number` | `0` | no |
 | <a name="input_namespace"></a> [namespace](#input\_namespace) | Namespace of the project, i.e. arc | `string` | `"arc"` | no |
 | <a name="input_region"></a> [region](#input\_region) | AWS region | `string` | `"us-east-1"` | no |
+| <a name="input_runner_name"></a> [runner\_name](#input\_runner\_name) | GitHub runner scale-set name used by workflows in `runs-on`. | `string` | `"arc-poc-github-runner"` | no |
 
 ## Outputs
 

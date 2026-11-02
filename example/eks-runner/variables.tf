@@ -72,3 +72,9 @@ variable "max_runners" {
   description = "Maximum number of runners per scale set."
   default     = 3
 }
+
+variable "runner_name" {
+  type        = string
+  description = "GitHub runner scale-set name used by workflows in `runs-on`."
+  default     = "arc-poc-github-runner"
+}
