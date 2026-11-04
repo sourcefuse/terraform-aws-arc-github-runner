@@ -1,10 +1,13 @@
 locals {
+  create_ec2_runner = var.create_ec2_runner
+  create_eks_runner = var.eks_runner_config.create
+
   ec2_runner_ssm_association = [
     {
       name = "AWS-UpdateSSMAgent"
     },
     {
-      name = aws_ssm_document.dependencies.name
+      name = one(aws_ssm_document.dependencies[*].name)
     }
   ]
 

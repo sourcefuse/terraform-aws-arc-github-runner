@@ -1,23 +1,4 @@
 ################################################################################
-## defaults / shared
-################################################################################
-terraform {
-  required_version = "~> 1.3, < 2.0.0"
-
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = ">= 5.0, < 6.0"
-    }
-
-    null = {
-      source  = "hashicorp/null"
-      version = ">= 3.0"
-    }
-  }
-}
-
-################################################################################
 ## lookups
 ################################################################################
 data "aws_caller_identity" "this" {}
@@ -28,6 +9,7 @@ data "aws_caller_identity" "this" {}
 module "runner" {
   source  = "sourcefuse/arc-ec2/aws"
   version = "0.0.5"
+  count   = local.create_ec2_runner ? 1 : 0
 
   name          = local.ec2_name
   vpc_id        = var.vpc_id
@@ -103,6 +85,8 @@ module "runner" {
 ################################################################################
 ## Mint a fresh GitHub registration token and store it in SSM Parameter Store.
 resource "null_resource" "prepare" {
+  count = local.create_ec2_runner ? 1 : 0
+
   triggers = {
     # Refresh the runner registration token on EVERY apply. GitHub registration
     # tokens expire in ~1h; with static triggers this ran only on the first
@@ -132,12 +116,21 @@ resource "null_resource" "prepare" {
       ${self.triggers.get_runner_token} || true
     EOT
   }
+
+  lifecycle {
+    precondition {
+      condition     = var.vpc_id != null && var.subnet_id != null && var.github_token != null
+      error_message = "vpc_id, subnet_id and github_token are required when create_ec2_runner is true."
+    }
+  }
 }
 
 ## Install host dependencies plus the tooling the pipeline jobs need
 ## (aws, kubectl, helm, terraform, git, node, docker). Runs immediately via the
 ## association below.
 resource "aws_ssm_document" "dependencies" {
+  count = local.create_ec2_runner ? 1 : 0
+
   name          = "${local.ec2_name}-dependencies"
   document_type = "Command"
   target_type   = "/AWS::EC2::Instance"
@@ -189,14 +182,14 @@ resource "aws_ssm_document" "dependencies" {
 }
 
 resource "aws_ssm_association" "dependencies" {
-  for_each = { for k, v in local.ec2_runner_ssm_association : k => v }
+  for_each = local.create_ec2_runner ? { for k, v in local.ec2_runner_ssm_association : k => v } : {}
 
   name             = each.value.name
   association_name = each.value.name
 
   targets {
     key    = "InstanceIds"
-    values = [module.runner.id]
+    values = [module.runner[0].id]
   }
 }
 
@@ -206,6 +199,8 @@ resource "aws_ssm_association" "dependencies" {
 ## so the short-lived registration token is only needed once). This avoids the
 ## container-image self-update failure that left the runner permanently Offline.
 resource "aws_ssm_document" "runner_install" {
+  count = local.create_ec2_runner ? 1 : 0
+
   name          = local.ec2_name
   document_type = "Command"
   target_type   = "/AWS::EC2::Instance"
@@ -259,15 +254,17 @@ resource "aws_ssm_document" "runner_install" {
 }
 
 resource "aws_ssm_association" "runner_install" {
-  name             = aws_ssm_document.runner_install.name
-  association_name = aws_ssm_document.runner_install.name
+  count = local.create_ec2_runner ? 1 : 0
+
+  name             = aws_ssm_document.runner_install[0].name
+  association_name = aws_ssm_document.runner_install[0].name
 
   apply_only_at_cron_interval = true
   schedule_expression         = "at(${trimsuffix(timeadd(timestamp(), "150s"), "Z")})"
 
   targets {
     key    = "InstanceIds"
-    values = [module.runner.id]
+    values = [module.runner[0].id]
   }
 
   depends_on = [
@@ -277,6 +274,8 @@ resource "aws_ssm_association" "runner_install" {
 
 ## remove runner from github on destroy
 resource "null_resource" "cleanup" {
+  count = local.create_ec2_runner ? 1 : 0
+
   triggers = {
     github_token      = var.github_token
     runner_name       = local.runner_name
@@ -305,3 +304,70 @@ resource "null_resource" "cleanup" {
     aws_ssm_association.runner_install
   ]
 }
+
+################################################################################
+## EKS Runner
+## Autoscaling, ephemeral runner scale sets on an existing EKS cluster using the
+## official Actions Runner Controller charts.
+################################################################################
+module "eks_runner" {
+  source = "./modules/eks-runner"
+
+  count = local.create_eks_runner ? 1 : 0
+
+  environment = var.environment
+  namespace   = var.namespace
+
+  # cluster (unset / null attributes fall back to the submodule defaults)
+  cluster_name      = var.eks_runner_config.cluster_name
+  oidc_provider_arn = var.eks_runner_config.oidc_provider_arn
+  name_prefix       = var.eks_runner_config.name_prefix
+
+  # kubernetes placement
+  k8s_namespace               = var.eks_runner_config.k8s_namespace
+  create_k8s_namespace        = var.eks_runner_config.create_k8s_namespace
+  k8s_namespace_labels        = var.eks_runner_config.k8s_namespace_labels
+  controller_namespace        = var.eks_runner_config.controller_namespace
+  create_controller_namespace = var.eks_runner_config.create_controller_namespace
+
+  # helm charts
+  install_controller         = var.eks_runner_config.install_controller
+  controller_service_account = var.eks_runner_config.controller_service_account
+  chart_oci_registry         = var.eks_runner_config.chart_oci_registry
+  chart_version              = var.eks_runner_config.chart_version
+  controller_release_name    = var.eks_runner_config.controller_release_name
+  controller_values          = var.eks_runner_config.controller_values
+  helm_timeout               = var.eks_runner_config.helm_timeout
+  helm_max_history           = var.eks_runner_config.helm_max_history
+
+  # runner scale sets
+  github_config_url = var.eks_runner_config.github_config_url
+  runner_scale_sets = var.eks_runner_config.runner_scale_sets
+
+  # github authentication
+  existing_github_config_secret_name = var.eks_runner_config.existing_github_config_secret_name
+  github_auth_method                 = var.eks_runner_config.github_auth_method
+  github_token                       = var.github_token
+  github_app_id                      = var.eks_runner_config.github_app_id
+  github_app_installation_id         = var.eks_runner_config.github_app_installation_id
+  github_app_private_key             = var.github_app_private_key
+
+  # iam for runner pods and the ebs csi driver
+  iam_auth_type                 = var.eks_runner_config.iam_auth_type
+  iam_role_path                 = var.eks_runner_config.iam_role_path
+  iam_role_permissions_boundary = var.eks_runner_config.iam_role_permissions_boundary
+
+  # storage
+  install_ebs_csi_driver    = var.eks_runner_config.install_ebs_csi_driver
+  ebs_csi_addon_version     = var.eks_runner_config.ebs_csi_addon_version
+  ebs_csi_kms_key_arn       = var.eks_runner_config.ebs_csi_kms_key_arn
+  create_storage_class      = var.eks_runner_config.create_storage_class
+  storage_class_name        = var.eks_runner_config.storage_class_name
+  storage_class_is_default  = var.eks_runner_config.storage_class_is_default
+  storage_class_provisioner = var.eks_runner_config.storage_class_provisioner
+  storage_class_volume_type = var.eks_runner_config.storage_class_volume_type
+
+  tags = var.tags
+}
+
+################################################################################

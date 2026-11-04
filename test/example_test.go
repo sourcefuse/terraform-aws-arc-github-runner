@@ -10,7 +10,7 @@ import (
 func TestTerraformExample(t *testing.T) {
 	// Arrange
 	terraformOptions := &terraform.Options{
-		TerraformDir: "../example/.",
+		TerraformDir: "../example/ec2-runner",
 	}
 	defer terraform.Destroy(t, terraformOptions)
 

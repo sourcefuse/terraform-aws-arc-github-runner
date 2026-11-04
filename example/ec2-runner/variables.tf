@@ -25,14 +25,23 @@ variable "namespace" {
 variable "vpc_names" {
   type        = list(string)
   description = "Private subnet names to add the runner"
-  default     = ["arc-dev-vpc"]
+  default     = ["arc-poc-vpc"]
 }
 
 variable "private_subnet_names" {
   type        = list(string)
   description = "Private subnet names to add the runner"
   default = [
-    "arc-dev-private-us-east-1a",
-    "arc-dev-private-us-east-1b"
+    "arc-poc-private-subnet-private-us-east-1a",
+    "arc-poc-private-subnet-private-us-east-1b"
   ]
+}
+
+################################################################################
+## github
+################################################################################
+variable "github_token_ssm_path" {
+  type        = string
+  description = "SSM SecureString path holding the GitHub PAT. Keep this separate from the root module's /github-runner/token registration parameter."
+  default     = "/arc/poc/github-runner/token"
 }
